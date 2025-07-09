@@ -1,0 +1,143 @@
+import controlP5.*;
+import java.util.*;
+
+ControlP5 cp5;
+ArrayList<Particle> particles;
+
+float gravity = 0.2;
+float particleSize = 6;
+float launchAngle = 90;
+
+boolean rainbowMode = false;
+boolean burstMode = false;
+long burstStartTime;
+
+void setup() {
+  size(900, 600);
+  particles = new ArrayList<Particle>();
+
+  
+  cp5 = new ControlP5(this);
+  
+  cp5.addSlider("gravity")
+    .setPosition(20, 20)
+    .setRange(0, 1)
+    .setValue(gravity);
+
+  cp5.addSlider("particleSize")
+    .setPosition(20, 60)
+    .setRange(2, 12)
+    .setValue(particleSize);
+
+  cp5.addSlider("launchAngle")
+    .setPosition(20, 100)
+    .setRange(60, 120)
+    .setValue(launchAngle);
+
+  cp5.addButton("resetParticles")
+    .setLabel("Reset")
+    .setPosition(20, 140)
+    .setSize(80, 30);
+
+  cp5.addToggle("rainbowMode")
+    .setLabel("Rainbow Mode")
+    .setPosition(20, 190)
+    .setSize(20, 20);
+}
+
+void draw() {
+  background(0);
+  
+  
+  for (int i = 0; i < 5; i++) {
+    if (burstMode && millis() - burstStartTime < 3000) {
+      float angle = random(0, TWO_PI);
+      float speed = random(3, 6);
+      PVector vel = PVector.fromAngle(angle).mult(speed);
+      particles.add(new Particle(new PVector(width/2, height), vel, rainbowMode));
+    } else {
+      float angle = radians(launchAngle + random(-10, 10));
+      float speed = random(4, 8);
+      PVector vel = new PVector(cos(angle) * speed, sin(angle) * speed * -1);
+      particles.add(new Particle(new PVector(width/2, height), vel, rainbowMode));
+    }
+  }
+
+  for (int i = particles.size()-1; i >= 0; i--) {
+    Particle p = particles.get(i);
+    p.update();
+    p.display();
+    if (p.life <= 0) {
+      particles.remove(i);
+    }
+  }
+  
+ 
+  fill(255);
+  textSize(12);
+  text("P: Capture PNG   |   B: Burst Mode (3s)   |   Use sliders to adjust gravity, size, angle", 10, height-10);
+  
+  
+  if (burstMode && millis() - burstStartTime >= 3000) {
+    burstMode = false;
+  }
+}
+
+
+class Particle {
+  PVector pos, vel;
+  float life;
+  color col;
+  boolean rainbow;
+  float hueVal;
+  
+  Particle(PVector pos, PVector vel, boolean rainbowMode) {
+    this.pos = pos.copy();
+    this.vel = vel.copy();
+    this.life = 255;
+    this.rainbow = rainbowMode;
+    if (rainbow) {
+      hueVal = random(255);
+      colorMode(HSB, 255);
+      col = color(hueVal, 255, 255);
+      colorMode(RGB, 255);
+    } else {
+      col = color(255);
+    }
+  }
+  
+  void update() {
+    vel.y += gravity;
+    pos.add(vel);
+    life -= 3;
+    if (rainbow) {
+      hueVal = (hueVal + 2) % 255;
+      colorMode(HSB, 255);
+      col = color(hueVal, 255, 255);
+      colorMode(RGB, 255);
+    }
+  }
+  
+  void display() {
+    noStroke();
+    fill(col, life);
+    ellipse(pos.x, pos.y, particleSize, particleSize);
+  }
+}
+
+
+void resetParticles() {
+  particles.clear();
+}
+
+
+void keyPressed() {
+  if (key == 'p' || key == 'P') {
+    String timestamp = nf(year(), 4) + nf(month(), 2) + nf(day(), 2) + "-" + nf(hour(), 2) + nf(minute(), 2) + nf(second(), 2);
+    saveFrame("fountain-" + timestamp + ".png");
+  }
+  if (key == 'b' || key == 'B') {
+    burstMode = true;
+    burstStartTime = millis();
+  }
+}
